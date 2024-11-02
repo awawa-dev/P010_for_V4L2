@@ -1,0 +1,37 @@
+--- ./include/linux/usb/uvc.h	2024-11-01 22:21:03.980798148 +0100
++++ ./include/linux/usb/uvc.h	2024-11-01 22:46:30.000000000 +0100
+@@ -105,6 +105,9 @@
+ #define UVC_GUID_FORMAT_M420 \
+ 	{ 'M',  '4',  '2',  '0', 0x00, 0x00, 0x10, 0x00, \
+ 	 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}
++#define UVC_GUID_FORMAT_P010 \
++	{ 'P',  '0',  '1',  '0', 0x00, 0x00, 0x10, 0x00, \
++	 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}
+ 
+ #define UVC_GUID_FORMAT_H264 \
+ 	{ 'H',  '2',  '6',  '4', 0x00, 0x00, 0x10, 0x00, \
+--- ./drivers/media/common/uvc.c	2024-11-01 22:51:02.110749702 +0100
++++ ./drivers/media/common/uvc.c	2024-11-01 22:51:45.000000000 +0100
+@@ -41,6 +41,10 @@
+ 		.fcc		= V4L2_PIX_FMT_M420,
+ 	},
+ 	{
++		.guid		= UVC_GUID_FORMAT_P010,
++		.fcc		= V4L2_PIX_FMT_P010,
++	},
++	{
+ 		.guid		= UVC_GUID_FORMAT_UYVY,
+ 		.fcc		= V4L2_PIX_FMT_UYVY,
+ 	},
+--- ./drivers/media/usb/uvc/uvc_v4l2.c	2024-11-02 14:55:15.954498375 +0100
++++ ./drivers/media/usb/uvc/uvc_v4l2.c	2024-11-02 14:57:09.000000000 +0100
+@@ -203,6 +203,9 @@
+ 	case V4L2_PIX_FMT_M420:
+ 		return frame->wWidth;
+ 
++	case V4L2_PIX_FMT_P010:
++		return frame->wWidth * 2;
++
+ 	default:
+ 		return format->bpp * frame->wWidth / 8;
+ 	}

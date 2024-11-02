@@ -1,0 +1,135 @@
+name: Build Image 
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KERNEL_VERSION: '6.6.51'
+      KERNEL_SOURCE: 'stable_20241008'
+      OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2024-10-28/2024-10-22-raspios-bookworm-arm64-lite.img.xz'
+      
+    steps:
+    
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install coreutils p7zip-full qemu-user-static python3-git
+
+    - name: Checkout CustomPiOS
+      uses: actions/checkout@v4.2.2
+      with:
+        repository: 'guysoft/CustomPiOS'
+        path: CustomPiOS
+        ref: c5b7ab895dde5b0fe43c1c8e55c8b86a3d5ced92
+
+    - name: Prepare HyperHDR module
+      run: |
+        cd CustomPiOS
+        sudo bash -x src/make_custom_pi_os HyperHDR
+        sudo chown -R runner HyperHDR        
+
+    - name: Download Raspbian Image (64-bits)
+      run: |
+        mkdir -p CustomPiOS/HyperHDR/src/image-raspios_lite_arm64
+        cd CustomPiOS/HyperHDR/src/image-raspios_lite_arm64
+        wget -q -c --trust-server-names '${{env.OS_IMAGE}}'
+        echo "workspace_dir=CustomPiOS/HyperHDR/src/workspace-raspios_lite_arm64" >> $GITHUB_ENV
+        echo "workspace_variant=raspios_lite_arm64" >> $GITHUB_ENV
+
+    - name: Apply P010 patch
+      run: | 
+        cd CustomPiOS/HyperHDR/src
+        echo 'export DIST_NAME=HyperHDR' > config
+        echo 'export DIST_VERSION=${{ github.event.inputs.tags }}' >> config
+        echo 'export MODULES="base(network,hyperhdr)"' >> config
+        echo 'export RPI_IMAGER_NAME="${DIST_NAME} version ${DIST_VERSION}"' >> config
+        echo 'export RPI_IMAGER_DESCRIPTION="Raspberry Pi OS with P010 patched kernel"' >> config
+        echo 'export RPI_IMAGER_ICON="https://github.com/awawa-dev/HyperHDR/blob/master/resources/icons/hyperhdr-icon-32px.png"' >> config
+        echo 'export BASE_IMAGE_ENLARGEROOT=2000' >> config
+        echo 'export BASE_IMAGE_RESIZEROOT=200' >> config      
+        cd modules/hyperhdr
+        echo '#!/usr/bin/env bash'  > start_chroot_script
+        echo 'set -x' >> start_chroot_script
+        echo 'set -e' >> start_chroot_script
+        echo 'source /common.sh' >> start_chroot_script
+        echo 'type -p curl >/dev/null || apt install curl -y' >> start_chroot_script
+        echo 'curl -fsSL https://awawa-dev.github.io/hyperhdr.public.apt.gpg.key | dd of=/usr/share/keyrings/hyperhdr.public.apt.gpg.key \' >> start_chroot_script
+        echo '&& chmod go+r /usr/share/keyrings/hyperhdr.public.apt.gpg.key \' >> start_chroot_script
+        echo '&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hyperhdr.public.apt.gpg.key] https://awawa-dev.github.io $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hyperhdr.list > /dev/null \' >> start_chroot_script
+        echo 'apt-get update' >> start_chroot_script
+        echo 'cd /tmp' >> start_chroot_script
+        echo 'sudo apt install -y git bc bison flex libssl-dev bc make' >> start_chroot_script
+        echo 'sudo wget -q https://github.com/raspberrypi/linux/archive/refs/tags/${{env.KERNEL_SOURCE}}.zip -O rpi-source && unzip -qq ./rpi-source' >> start_chroot_script
+        echo 'cd linux-${{env.KERNEL_SOURCE}}' >> start_chroot_script
+        echo 'wget https://raw.githubusercontent.com/awawa-dev/P010_for_V4L2/refs/heads/master/p010.patch' >> start_chroot_script
+        echo 'patch -p0 < ./p010.patch' >> start_chroot_script
+        echo 'for Architecture in 2712 v8' >> start_chroot_script
+        echo 'do' >> start_chroot_script
+        echo 'make clean && make mrproper' >> start_chroot_script        
+        echo 'UNAME=${{env.KERNEL_VERSION}}+rpt-rpi-$Architecture' >> start_chroot_script
+        echo 'if [ "$Architecture" == "v8" ]; then' >> start_chroot_script
+        echo 'KERNEL_VER=${{env.KERNEL_VERSION}}-v8' >> start_chroot_script
+        echo 'KERNEL=kernel8' >> start_chroot_script
+        echo 'yes "" | make bcm2711_defconfig scripts prepare modules_prepare' >> start_chroot_script
+        echo 'else' >> start_chroot_script
+        echo 'KERNEL_VER=${{env.KERNEL_VERSION}}-v8-16k' >> start_chroot_script
+        echo 'KERNEL=kernel_2712' >> start_chroot_script
+        echo 'yes "" | make bcm2712_defconfig scripts prepare modules_prepare' >> start_chroot_script
+        echo 'fi' >> start_chroot_script
+        echo 'echo "!!!!!!!!!!!!!!!!!!!!!!!!!! Architecture=$Architecture KERNEL_VER=$KERNEL_VER UNAME=$UNAME KERNEL=$KERNEL !!!!!!!!!!!!!!!!!!!!!!!!!!"' >> start_chroot_script
+        echo 'sudo apt install linux-headers-$UNAME' >> start_chroot_script
+        echo 'cp /usr/src/linux-headers-$UNAME/Module.symvers .' >> start_chroot_script
+        echo 'make -j $(nproc) M=drivers/media/usb/uvc modules' >> start_chroot_script
+        echo 'sudo make -j $(nproc) M=drivers/media/usb/uvc modules_install' >> start_chroot_script
+        echo 'make -j $(nproc) M=drivers/media/common modules' >> start_chroot_script
+        echo 'sudo make -j $(nproc) M=drivers/media/common modules_install' >> start_chroot_script
+        echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvcvideo.ko.xz /lib/modules/$UNAME/kernel/drivers/media/usb/uvc/uvcvideo.ko.xz' >> start_chroot_script
+        echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvc.ko.xz /lib/modules/$UNAME/kernel/drivers/media/common/uvc.ko.xz' >> start_chroot_script
+        echo 'done' >> start_chroot_script
+        echo 'sudo apt remove -y git bc bison flex libssl-dev bc make && sudo apt autoremove -y && sudo apt clean -y' >> start_chroot_script
+        echo 'cd /' >> start_chroot_script
+        echo 'rm -rf /tmp/*' >> start_chroot_script
+        echo 'touch /boot/ssh' >> start_chroot_script
+        echo "echo -n 'pi:' > /boot/userconf" >> start_chroot_script
+        echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script
+        echo 'echo "HyperHDR" > /etc/hostname' >> start_chroot_script
+        echo 'sed -i "s/raspberrypi/HyperHDR/" /etc/hosts' >> start_chroot_script
+        echo 'sed -i "s/^#dtparam=spi=on.*/dtparam=spi=on/" /boot/config.txt' >> start_chroot_script
+        echo 'sed -i "s/^#hdmi_force_hotplug=1.*/hdmi_force_hotplug=1/" /boot/config.txt' >> start_chroot_script
+        chmod +x start_chroot_script
+
+    - name: Build P010 patched Raspberry Pi Image
+      run: |
+        sudo modprobe loop
+        cd CustomPiOS/HyperHDR
+        sudo bash -x src/build_dist ${{ env.workspace_variant }}
+
+    - name: Copy output
+      id: copy
+      run: |
+        IMAGE=RaspberryPiOS-P010-hdr-os-image-bookworm-aarch64
+        cp ${{ env.workspace_dir }}/*.img $IMAGE.img
+        xz -v9 $IMAGE.img
+        echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+    - name: Upload image
+      uses: actions/upload-artifact@v4.4.3
+      if: (startsWith(github.event.ref, 'refs/tags') != true)
+      with:
+        name: ${{ steps.copy.outputs.image }}
+        path: ${{ steps.copy.outputs.image }}.img.xz
+
+    - name: Create draft release
+      uses: softprops/action-gh-release@v2.0.8
+      if: startsWith(github.event.ref, 'refs/tags')
+      with:
+        name: Raspberry PI OS aarch (P010 patched) ${{ env.VERSION }}
+        tag_name: ${{ env.TAG }}
+        files: ${{ steps.copy.outputs.image }}.img.xz
+        draft: true
