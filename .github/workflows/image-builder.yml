@@ -126,7 +126,7 @@ jobs:
         path: ${{ steps.copy.outputs.image }}.img.xz
 
     - name: Create draft release
-      uses: softprops/action-gh-release@v2.0.8
+      uses: softprops/action-gh-release@v2.1.0
       if: startsWith(github.event.ref, 'refs/tags')
       with:
         name: Raspberry PI OS aarch (P010 patched) ${{ env.VERSION }}
