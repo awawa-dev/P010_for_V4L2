@@ -62,7 +62,8 @@ jobs:
         echo 'curl -fsSL https://awawa-dev.github.io/hyperhdr.public.apt.gpg.key | dd of=/usr/share/keyrings/hyperhdr.public.apt.gpg.key \' >> start_chroot_script
         echo '&& chmod go+r /usr/share/keyrings/hyperhdr.public.apt.gpg.key \' >> start_chroot_script
         echo '&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hyperhdr.public.apt.gpg.key] https://awawa-dev.github.io $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hyperhdr.list > /dev/null \' >> start_chroot_script
-        echo 'apt-get update' >> start_chroot_script
+        echo '&& sudo apt update \' >> start_chroot_script
+        echo '&& sudo apt install hyperhdr -y' >> start_chroot_script
         echo 'cd /tmp' >> start_chroot_script
         echo 'sudo apt install -y git bc bison flex libssl-dev bc make' >> start_chroot_script
         echo 'sudo wget -q https://github.com/raspberrypi/linux/archive/refs/tags/${{env.KERNEL_SOURCE}}.zip -O rpi-source && unzip -qq ./rpi-source' >> start_chroot_script
@@ -100,7 +101,9 @@ jobs:
         echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script
         echo 'echo "HyperHDR" > /etc/hostname' >> start_chroot_script
         echo 'sed -i "s/raspberrypi/HyperHDR/" /etc/hosts' >> start_chroot_script
+        echo "systemctl -q enable hyperhdr@pi.service" >> start_chroot_script
         echo 'sed -i "s/^#dtparam=spi=on.*/dtparam=spi=on/" /boot/config.txt' >> start_chroot_script
+        echo 'sed -i "s/^#dtparam=spi=on.*/dtparam=spi=on/" /boot/firmware/config.txt' >> start_chroot_script
         echo 'sed -i "s/^#hdmi_force_hotplug=1.*/hdmi_force_hotplug=1/" /boot/config.txt' >> start_chroot_script
         chmod +x start_chroot_script
 
