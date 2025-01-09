@@ -66,8 +66,9 @@ jobs:
         echo '&& sudo apt install hyperhdr -y' >> start_chroot_script
         echo 'cd /tmp' >> start_chroot_script
         echo 'sudo apt install -y git bc bison flex libssl-dev bc make' >> start_chroot_script
-        echo 'sudo wget -q https://github.com/raspberrypi/linux/archive/refs/tags/${{env.KERNEL_SOURCE}}.zip -O rpi-source && unzip -qq ./rpi-source' >> start_chroot_script
-        echo 'cd linux-${{env.KERNEL_SOURCE}}' >> start_chroot_script
+        echo 'sudo wget https://raw.githubusercontent.com/RPi-Distro/rpi-source/a07bc906c27c781b2c07f61df35f65a313a7e991/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update --processor 3' >> start_chroot_script
+        echo 'mkdir -p /tmp/kernel-source && /usr/local/bin/rpi-source -d /tmp/kernel-source --nomake --default-config --processor 3 --download-only' >> start_chroot_script     
+        echo 'cd kernel-source && ls *tar.gz | xargs -n1 tar xvf && cd $(ls -d */|head -n 1) && ls -a' >> start_chroot_script
         echo 'wget https://raw.githubusercontent.com/awawa-dev/P010_for_V4L2/refs/heads/master/p010.patch' >> start_chroot_script
         echo 'patch -p0 < ./p010.patch' >> start_chroot_script
         echo 'for Architecture in 2712 v8' >> start_chroot_script
@@ -93,7 +94,6 @@ jobs:
         echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvcvideo.ko.xz /lib/modules/$UNAME/kernel/drivers/media/usb/uvc/uvcvideo.ko.xz' >> start_chroot_script
         echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvc.ko.xz /lib/modules/$UNAME/kernel/drivers/media/common/uvc.ko.xz' >> start_chroot_script
         echo 'done' >> start_chroot_script
-        echo 'sudo apt remove -y git bc bison flex libssl-dev bc make && sudo apt autoremove -y && sudo apt clean -y' >> start_chroot_script
         echo 'cd /' >> start_chroot_script
         echo 'rm -rf /tmp/*' >> start_chroot_script
         echo 'touch /boot/ssh' >> start_chroot_script
@@ -114,6 +114,7 @@ jobs:
         sudo bash -x src/build_dist ${{ env.workspace_variant }}
 
     - name: Copy output
+      if: false #enable me later
       id: copy
       run: |
         IMAGE=RaspberryPiOS-P010-hdr-os-image-bookworm-aarch64
@@ -123,14 +124,16 @@ jobs:
 
     - name: Upload image
       uses: actions/upload-artifact@v4.4.3
-      if: (startsWith(github.event.ref, 'refs/tags') != true)
+      #if: (startsWith(github.event.ref, 'refs/tags') != true)
+      if: false #enable me later
       with:
         name: ${{ steps.copy.outputs.image }}
         path: ${{ steps.copy.outputs.image }}.img.xz
 
     - name: Create draft release
       uses: softprops/action-gh-release@v2.0.8
-      if: startsWith(github.event.ref, 'refs/tags')
+      #if: startsWith(github.event.ref, 'refs/tags')
+      if: false #enable me later
       with:
         name: Raspberry PI OS aarch (P010 patched) ${{ env.VERSION }}
         tag_name: ${{ env.TAG }}
