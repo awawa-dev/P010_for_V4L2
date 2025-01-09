@@ -10,8 +10,6 @@ jobs:
     permissions:
       contents: write
     env:
-      KERNEL_VERSION: '6.6.51'
-      KERNEL_SOURCE: 'stable_20241008'
       OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2024-10-28/2024-10-22-raspios-bookworm-arm64-lite.img.xz'
       
     steps:
@@ -66,21 +64,22 @@ jobs:
         echo '&& sudo apt install hyperhdr -y' >> start_chroot_script
         echo 'cd /tmp' >> start_chroot_script
         echo 'sudo apt install -y git bc bison flex libssl-dev bc make' >> start_chroot_script
-        echo 'sudo wget https://raw.githubusercontent.com/RPi-Distro/rpi-source/a07bc906c27c781b2c07f61df35f65a313a7e991/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update --processor 3' >> start_chroot_script
-        echo 'mkdir -p /tmp/kernel-source && /usr/local/bin/rpi-source -d /tmp/kernel-source --nomake --default-config --processor 3 --download-only' >> start_chroot_script     
-        echo 'cd kernel-source && ls *tar.gz | xargs -n1 tar xvf && cd $(ls -d */|head -n 1) && ls -a' >> start_chroot_script
+        echo 'sudo wget https://raw.githubusercontent.com/awawa-dev/P010_for_V4L2/refs/heads/dkms/rpi-source/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update --processor 4' >> start_chroot_script
+        echo 'mkdir -p /tmp/kernel-source && /usr/local/bin/rpi-source -q -d /tmp/kernel-source --nomake --default-config --processor 4 --download-only' >> start_chroot_script     
+        echo 'cd kernel-source && ls *.tar.gz | xargs -n1 tar xf && rm *.tar.gz && cd $(ls -d */|head -n 1)' >> start_chroot_script
         echo 'wget https://raw.githubusercontent.com/awawa-dev/P010_for_V4L2/refs/heads/master/p010.patch' >> start_chroot_script
         echo 'patch -p0 < ./p010.patch' >> start_chroot_script
         echo 'for Architecture in 2712 v8' >> start_chroot_script
         echo 'do' >> start_chroot_script
         echo 'make clean && make mrproper' >> start_chroot_script        
-        echo 'UNAME=${{env.KERNEL_VERSION}}+rpt-rpi-$Architecture' >> start_chroot_script
+        echo 'KERNEL_VERSION=$(ls /usr/lib/linux-image* | sed -E "s/.*linux-image-([0-9]+.[0-9]+.[0-9]+)\+rpt-rpi.*/\1/"  | head -1)' >> start_chroot_script
+        echo 'UNAME=$KERNEL_VERSION+rpt-rpi-$Architecture' >> start_chroot_script
         echo 'if [ "$Architecture" == "v8" ]; then' >> start_chroot_script
-        echo 'KERNEL_VER=${{env.KERNEL_VERSION}}-v8' >> start_chroot_script
+        echo 'KERNEL_VER=$KERNEL_VERSION-v8' >> start_chroot_script
         echo 'KERNEL=kernel8' >> start_chroot_script
         echo 'yes "" | make bcm2711_defconfig scripts prepare modules_prepare' >> start_chroot_script
         echo 'else' >> start_chroot_script
-        echo 'KERNEL_VER=${{env.KERNEL_VERSION}}-v8-16k' >> start_chroot_script
+        echo 'KERNEL_VER=$KERNEL_VERSION-v8-16k' >> start_chroot_script
         echo 'KERNEL=kernel_2712' >> start_chroot_script
         echo 'yes "" | make bcm2712_defconfig scripts prepare modules_prepare' >> start_chroot_script
         echo 'fi' >> start_chroot_script
@@ -94,8 +93,9 @@ jobs:
         echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvcvideo.ko.xz /lib/modules/$UNAME/kernel/drivers/media/usb/uvc/uvcvideo.ko.xz' >> start_chroot_script
         echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvc.ko.xz /lib/modules/$UNAME/kernel/drivers/media/common/uvc.ko.xz' >> start_chroot_script
         echo 'done' >> start_chroot_script
+        echo 'sudo apt remove -y git bc bison flex libssl-dev bc make && sudo apt autoremove -y && sudo apt clean -y' >> start_chroot_script
         echo 'cd /' >> start_chroot_script
-        echo 'rm -rf /tmp/*' >> start_chroot_script
+        echo 'rm -rf /tmp/kernel-source && rm -rf /tmp/*' >> start_chroot_script
         echo 'touch /boot/ssh' >> start_chroot_script
         echo "echo -n 'pi:' > /boot/userconf" >> start_chroot_script
         echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script
