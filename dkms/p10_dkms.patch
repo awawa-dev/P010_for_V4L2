@@ -1,0 +1,39 @@
+diff --git a/drivers/media/common/uvc.c b/drivers/media/common/uvc.c
+index 9c0ba7a6c185..249328428ce7 100644
+--- a/drivers/media/common/uvc.c
++++ b/drivers/media/common/uvc.c
+@@ -10,6 +10,9 @@
+ /* ------------------------------------------------------------------------
+  * Video formats
+  */
++#define UVC_GUID_FORMAT_P010 \
++	{ 'P',  '0',  '1',  '0', 0x00, 0x00, 0x10, 0x00, \
++	 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}
+ 
+ static const struct uvc_format_desc uvc_fmts[] = {
+ 	{
+@@ -40,6 +43,10 @@ static const struct uvc_format_desc uvc_fmts[] = {
+ 		.guid		= UVC_GUID_FORMAT_M420,
+ 		.fcc		= V4L2_PIX_FMT_M420,
+ 	},
++	{
++		.guid		= UVC_GUID_FORMAT_P010,
++		.fcc		= V4L2_PIX_FMT_P010,
++	},
+ 	{
+ 		.guid		= UVC_GUID_FORMAT_UYVY,
+ 		.fcc		= V4L2_PIX_FMT_UYVY,
+diff --git a/drivers/media/usb/uvc/uvc_v4l2.c b/drivers/media/usb/uvc/uvc_v4l2.c
+index f4988f03640a..8998bc2079e0 100644
+--- a/drivers/media/usb/uvc/uvc_v4l2.c
++++ b/drivers/media/usb/uvc/uvc_v4l2.c
+@@ -203,6 +203,9 @@ static u32 uvc_v4l2_get_bytesperline(const struct uvc_format *format,
+ 	case V4L2_PIX_FMT_M420:
+ 		return frame->wWidth;
+ 
++	case V4L2_PIX_FMT_P010:
++		return frame->wWidth * 2;
++
+ 	default:
+ 		return format->bpp * frame->wWidth / 8;
+ 	}
