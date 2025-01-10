@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if dpkg -s raspberrypi-bootloader &>/dev/null; then
+  echo "Please uninstall raspberrypi-bootloader package. Kernel changelog can be already damaged."
+  exit 2
+fi
+
 /usr/local/bin/rpi-source -q --download-only --skip-update --dest .
 
 echo "Extracting original source"
