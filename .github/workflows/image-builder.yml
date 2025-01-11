@@ -3,11 +3,6 @@ name: Build Image
 on:
   push:
   workflow_dispatch:
-    inputs:
-      disable_dkms:
-        description: 'Disable DKMS support'
-        default: false
-        required: true
 
 jobs:
   build:
@@ -15,9 +10,8 @@ jobs:
     permissions:
       contents: write
     env:
-      SCRIPT_PATH: 'https://raw.githubusercontent.com/awawa-dev/P010_for_V4L2/refs/heads/dkms'
+      SCRIPT_PATH: 'https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/dkms'
       OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2024-10-28/2024-10-22-raspios-bookworm-arm64-lite.img.xz'
-      DISABLE_DKMS: '${{ github.event.inputs.disable_dkms || false }}'
       
     steps:
     
@@ -69,46 +63,18 @@ jobs:
         echo '&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hyperhdr.public.apt.gpg.key] https://awawa-dev.github.io $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hyperhdr.list > /dev/null \' >> start_chroot_script
         echo '&& sudo apt update \' >> start_chroot_script
         echo '&& sudo apt install hyperhdr -y' >> start_chroot_script
-        echo 'cd /tmp' >> start_chroot_script
-        echo 'sudo apt install -y git bc bison flex libssl-dev bc make' >> start_chroot_script
-        echo '${{env.DISABLE_DKMS}} || sudo apt install -y dkms' >> start_chroot_script
-        echo '${{env.DISABLE_DKMS}} || sudo mkdir -p /usr/src/v4l2_p010-1.0' >> start_chroot_script
-        echo '${{env.DISABLE_DKMS}} || sudo wget ${{env.SCRIPT_PATH}}/dkms/p10_dkms.patch -O /usr/src/v4l2_p010-1.0/p10_dkms.patch' >> start_chroot_script        
-        echo '${{env.DISABLE_DKMS}} || sudo wget ${{env.SCRIPT_PATH}}/dkms/dkms.conf -O /usr/src/v4l2_p010-1.0/dkms.conf' >> start_chroot_script
-        echo '${{env.DISABLE_DKMS}} || (sudo wget ${{env.SCRIPT_PATH}}/dkms/dkms-patchmodule.sh -O /usr/src/v4l2_p010-1.0/dkms-patchmodule.sh && sudo chmod +x /usr/src/v4l2_p010-1.0/dkms-patchmodule.sh)' >> start_chroot_script
-        echo '${{env.DISABLE_DKMS}} || sudo dkms add -m v4l2_p010 -v 1.0' >> start_chroot_script
+        echo 'sudo apt-get install --no-install-recommends -y dkms build-essential bc' >> start_chroot_script
+        echo 'sudo mkdir -p /usr/src/v4l2-p010-1.0' >> start_chroot_script
+        echo 'sudo wget ${{env.SCRIPT_PATH}}/dkms/p10_dkms.patch -O /usr/src/v4l2-p010-1.0/p10_dkms.patch' >> start_chroot_script
+        echo 'sudo wget ${{env.SCRIPT_PATH}}/dkms/dkms.conf -O /usr/src/v4l2-p010-1.0/dkms.conf' >> start_chroot_script
+        echo 'sudo wget ${{env.SCRIPT_PATH}}/dkms/dkms-patchmodule.sh -O /usr/src/v4l2-p010-1.0/dkms-patchmodule.sh && sudo chmod +x /usr/src/v4l2-p010-1.0/dkms-patchmodule.sh' >> start_chroot_script
+        echo 'sudo dkms add -m v4l2-p010 -v 1.0' >> start_chroot_script
         echo 'sudo wget ${{env.SCRIPT_PATH}}/rpi-source/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update --processor 4' >> start_chroot_script
-        echo 'mkdir -p /tmp/kernel-source && /usr/local/bin/rpi-source -q -d /tmp/kernel-source --nomake --default-config --processor 4 --download-only' >> start_chroot_script     
-        echo 'cd kernel-source && ls *.tar.gz | xargs -n1 tar xf && rm *.tar.gz && cd $(ls -d */|head -n 1)' >> start_chroot_script
-        echo 'wget ${{env.SCRIPT_PATH}}/p010.patch' >> start_chroot_script
-        echo 'patch -p0 < ./p010.patch' >> start_chroot_script
-        echo 'for Architecture in 2712 v8' >> start_chroot_script
+        echo 'KERNELS=$(ls -d /usr/lib/linux-image* | sed -E "s/.*linux-image-([0-9\.]+.*)/\1/")' >> start_chroot_script
+        echo 'for KERNEL in $KERNELS' >> start_chroot_script
         echo 'do' >> start_chroot_script
-        echo 'make clean && make mrproper' >> start_chroot_script        
-        echo 'KERNEL_VERSION=$(ls /usr/lib/linux-image* | sed -E "s/.*linux-image-([0-9]+.[0-9]+.[0-9]+)\+rpt-rpi.*/\1/"  | head -1)' >> start_chroot_script
-        echo 'UNAME=$KERNEL_VERSION+rpt-rpi-$Architecture' >> start_chroot_script
-        echo 'if [ "$Architecture" == "v8" ]; then' >> start_chroot_script
-        echo 'KERNEL_VER=$KERNEL_VERSION-v8' >> start_chroot_script
-        echo 'KERNEL=kernel8' >> start_chroot_script
-        echo 'yes "" | make bcm2711_defconfig scripts prepare modules_prepare' >> start_chroot_script
-        echo 'else' >> start_chroot_script
-        echo 'KERNEL_VER=$KERNEL_VERSION-v8-16k' >> start_chroot_script
-        echo 'KERNEL=kernel_2712' >> start_chroot_script
-        echo 'yes "" | make bcm2712_defconfig scripts prepare modules_prepare' >> start_chroot_script
-        echo 'fi' >> start_chroot_script
-        echo 'echo "!!!!!!!!!!!!!!!!!!!!!!!!!! Architecture=$Architecture KERNEL_VER=$KERNEL_VER UNAME=$UNAME KERNEL=$KERNEL !!!!!!!!!!!!!!!!!!!!!!!!!!"' >> start_chroot_script
-        echo 'sudo apt install linux-headers-$UNAME' >> start_chroot_script
-        echo 'cp /usr/src/linux-headers-$UNAME/Module.symvers .' >> start_chroot_script
-        echo 'make -j $(nproc) M=drivers/media/usb/uvc modules' >> start_chroot_script
-        echo 'sudo make -j $(nproc) M=drivers/media/usb/uvc modules_install' >> start_chroot_script
-        echo 'make -j $(nproc) M=drivers/media/common modules' >> start_chroot_script
-        echo 'sudo make -j $(nproc) M=drivers/media/common modules_install' >> start_chroot_script
-        echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvcvideo.ko.xz /lib/modules/$UNAME/kernel/drivers/media/usb/uvc/uvcvideo.ko.xz' >> start_chroot_script
-        echo 'sudo cp -f /lib/modules/$KERNEL_VER/updates/uvc.ko.xz /lib/modules/$UNAME/kernel/drivers/media/common/uvc.ko.xz' >> start_chroot_script
+        echo 'sudo dkms install -m v4l2-p010/1.0 -k $KERNEL -a arm64' >> start_chroot_script
         echo 'done' >> start_chroot_script
-        echo '(! ${{env.DISABLE_DKMS}}) || (sudo apt remove -y git bc bison flex libssl-dev bc make && sudo apt autoremove -y && sudo apt clean -y)' >> start_chroot_script
-        echo 'cd /' >> start_chroot_script
-        echo 'rm -rf /tmp/kernel-source && rm -rf /tmp/*' >> start_chroot_script
         echo 'touch /boot/ssh' >> start_chroot_script
         echo "echo -n 'pi:' > /boot/userconf" >> start_chroot_script
         echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script

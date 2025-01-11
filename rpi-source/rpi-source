@@ -401,14 +401,14 @@ if not args.skip_gcc:
 
 check_bc()
 
-debianlog = "/usr/share/doc/raspberrypi-bootloader/changelog.Debian.gz"
+debianlog = "/usr/share/doc/raspi-firmware/changelog.Debian.gz"
 if not os.path.exists(debianlog):
-    debianlog = "/usr/share/doc/raspi-firmware/changelog.Debian.gz"
+    debianlog = "/usr/share/doc/raspberrypi-bootloader/changelog.Debian.gz"
 
-if os.path.exists(firmware_revision_path):
-    kernel = rpi_update_method(args.uri)
-elif os.path.exists(debianlog):
+if os.path.exists(debianlog):
     kernel = debian_method(debianlog)
+elif os.path.exists(firmware_revision_path):
+    kernel = rpi_update_method(args.uri)
 else:
     fail("Can't find a source for this kernel")
 

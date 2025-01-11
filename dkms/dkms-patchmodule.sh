@@ -5,7 +5,7 @@ if dpkg -s raspberrypi-bootloader &>/dev/null; then
   exit 2
 fi
 
-/usr/local/bin/rpi-source -q --download-only --skip-update --dest .
+/usr/local/bin/rpi-source -q --download-only --processor 4 --default-config --skip-update --dest .
 
 echo "Extracting original source"
 tar --wildcards --one-top-level=src --strip-components 1 -xf linux-*.tar.* linux-*/drivers/media/common linux-*/drivers/media/usb/uvc
