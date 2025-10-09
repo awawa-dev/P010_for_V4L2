@@ -6,12 +6,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write
     env:
-      SCRIPT_PATH: 'https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/dkms'
-      OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2024-10-28/2024-10-22-raspios-bookworm-arm64-lite.img.xz'
+      BASE_BOARD: raspberrypiarm64
+      SCRIPT_PATH: 'https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/master'
+      OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2025-10-02/2025-10-01-raspios-trixie-arm64-lite.img.xz'
       
     steps:
     
@@ -25,7 +26,7 @@ jobs:
       with:
         repository: 'guysoft/CustomPiOS'
         path: CustomPiOS
-        ref: c5b7ab895dde5b0fe43c1c8e55c8b86a3d5ced92
+        ref: 5735722099df4a481b55b87a221dd10799295af8
 
     - name: Prepare HyperHDR module
       run: |
@@ -90,12 +91,13 @@ jobs:
       run: |
         sudo modprobe loop
         cd CustomPiOS/HyperHDR
-        sudo bash -x src/build_dist ${{ env.workspace_variant }}
+        sudo BASE_BOARD=$BASE_BOARD bash -x src/build_dist ${{ env.workspace_variant }}
 
     - name: Copy output
       id: copy
-      run: |
-        IMAGE=RaspberryPiOS-P010-hdr-os-image-bookworm-aarch64
+      run: |        
+        RELEASE_NAME=$(basename "$OS_IMAGE" .img.xz)
+        IMAGE=$(echo "$RELEASE_NAME" | sed 's/\(.*\)-arm64/\1-P010-hdr-arm64/')
         cp ${{ env.workspace_dir }}/*.img $IMAGE.img
         xz -v9 $IMAGE.img
         echo "image=$IMAGE" >> $GITHUB_OUTPUT
