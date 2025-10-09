@@ -77,6 +77,9 @@ jobs:
         echo 'sudo dkms install -m v4l2-p010/1.0 -k $KERNEL -a arm64' >> start_chroot_script
         echo 'done' >> start_chroot_script
         echo 'touch /boot/ssh' >> start_chroot_script
+        echo 'sudo sed -i "s/^# *PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config' >> start_chroot_script
+        echo 'sudo sed -i "/^IPQoS/d" /etc/ssh/sshd_config' >> start_chroot_script
+        echo 'sudo sed -i "/^IPQoS/d" /etc/ssh/ssh_config' >> start_chroot_script
         echo "echo -n 'pi:' > /boot/userconf" >> start_chroot_script
         echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script
         echo 'echo "HyperHDR" > /etc/hostname' >> start_chroot_script
@@ -85,6 +88,33 @@ jobs:
         echo 'sed -i "s/^#dtparam=spi=on.*/dtparam=spi=on/" /boot/config.txt' >> start_chroot_script
         echo 'sed -i "s/^#dtparam=spi=on.*/dtparam=spi=on/" /boot/firmware/config.txt' >> start_chroot_script
         echo 'sed -i "s/^#hdmi_force_hotplug=1.*/hdmi_force_hotplug=1/" /boot/config.txt' >> start_chroot_script
+        # LOGO STARTS HERE        
+        echo 'set -e' >> start_chroot_script
+        echo "echo '#!/bin/bash' > /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo 'ascii_art=\$(cat << \"EOF\"' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script                                                                          
+        echo "echo '                                                                           ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  █████   █████                                                            ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo ' ░░███   ░░███                                                             ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  ░███    ░███  █████ ████ ████████   ██████  ████████                     ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  ░███████████ ░░███ ░███ ░░███░░███ ███ ░███░░███░░███                    ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  ░███░░░░░███  ░███ ░███  ░███ ░███░███████  ░███ ░░░                     ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  ░███    ░███  ░███ ░███  ░███ ░███░███░░░   ░███                         ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '  █████   █████ ░░███████  ░███████ ░░██████  █████                        ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo ' ░░░░░   ░░░░░   ░░░░░███  ░███░░░   ░░░░░░  ░░░░░                         ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                 ███ ░███  ░███                                            ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script        
+        echo "echo '                ░░██████   █████   █████   █████ ██████████   ███████████  ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                 ░░░░░░   ░░░░░   ░░███   ░░███ ░░███░░░░███ ░░███░░░░░███ ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                   ░███    ░███  ░███   ░░███ ░███    ░███ ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                   ░███████████  ░███    ░███ ░██████████  ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                   ░███░░░░░███  ░███    ░███ ░███░░░░░███ ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                   ░███    ░███  ░███    ███  ░███    ░███ ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                   █████   █████ ██████████   █████   █████' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo '                                  ░░░░░   ░░░░░ ░░░░░░░░░░   ░░░░░   ░░░░░ ' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo 'EOF' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo ')' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo "echo 'printf \"\033[1;38;5;124m%s\033[0m\n\" \"\$ascii_art\"' >> /etc/profile.d/hyperhdr.sh" >> start_chroot_script
+        echo 'chmod +x /etc/profile.d/hyperhdr.sh' >> start_chroot_script
+        # LOGO ENDS HERE
         chmod +x start_chroot_script
 
     - name: Build P010 patched Raspberry Pi Image
