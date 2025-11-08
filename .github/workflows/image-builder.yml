@@ -26,7 +26,7 @@ jobs:
       with:
         repository: 'guysoft/CustomPiOS'
         path: CustomPiOS
-        ref: 5735722099df4a481b55b87a221dd10799295af8
+        ref: 6827c72e5de037eb79a8714099df45b0b62a4337
 
     - name: Prepare HyperHDR module
       run: |
@@ -78,8 +78,6 @@ jobs:
         echo 'done' >> start_chroot_script
         echo 'touch /boot/ssh' >> start_chroot_script
         echo 'sudo sed -i "s/^# *PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config' >> start_chroot_script
-        echo 'sudo sed -i "/^IPQoS/d" /etc/ssh/sshd_config' >> start_chroot_script
-        echo 'sudo sed -i "/^IPQoS/d" /etc/ssh/ssh_config' >> start_chroot_script
         echo "echo -n 'pi:' > /boot/userconf" >> start_chroot_script
         echo "echo 'raspberry' | openssl passwd -6 -stdin >> /boot/userconf" >> start_chroot_script
         echo 'echo "HyperHDR" > /etc/hostname' >> start_chroot_script
