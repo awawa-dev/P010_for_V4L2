@@ -12,7 +12,7 @@ jobs:
     env:
       BASE_BOARD: raspberrypiarm64
       SCRIPT_PATH: 'https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/master'
-      OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2025-10-02/2025-10-01-raspios-trixie-arm64-lite.img.xz'
+      OS_IMAGE: 'https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2025-12-04/2025-12-04-raspios-trixie-arm64-lite.img.xz'
       
     steps:
     
