@@ -26,7 +26,7 @@ jobs:
       with:
         repository: 'guysoft/CustomPiOS'
         path: CustomPiOS
-        ref: 6827c72e5de037eb79a8714099df45b0b62a4337
+        ref: ed30ce730c060dd5f10ddabe80b359faa06efd6e
 
     - name: Prepare HyperHDR module
       run: |
@@ -41,6 +41,16 @@ jobs:
         wget -q -c --trust-server-names '${{env.OS_IMAGE}}'
         echo "workspace_dir=CustomPiOS/HyperHDR/src/workspace-raspios_lite_arm64" >> $GITHUB_ENV
         echo "workspace_variant=raspios_lite_arm64" >> $GITHUB_ENV
+
+    - name: Prepare post-build cleanup for Raspbian Image (64-bits)
+      run: |
+        mkdir -p CustomPiOS/src/variants/raspios_lite_arm64
+        cd CustomPiOS/src/variants/raspios_lite_arm64
+        echo '#!/usr/bin/env bash' > post_chroot_script
+        echo 'set -e' >> post_chroot_script
+        echo 'rm -f /common.sh /Common.sh 2>/dev/null || true' >> post_chroot_script
+        echo 'echo "=== CustomPiOS common.sh cleanup completed ==="' >> post_chroot_script
+        chmod +x post_chroot_script      
 
     - name: Apply P010 patch
       run: | 
