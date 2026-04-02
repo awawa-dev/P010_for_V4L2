@@ -26,7 +26,7 @@ jobs:
       with:
         repository: 'guysoft/CustomPiOS'
         path: CustomPiOS
-        ref: 6827c72e5de037eb79a8714099df45b0b62a4337
+        ref: ed30ce730c060dd5f10ddabe80b359faa06efd6e
 
     - name: Prepare HyperHDR module
       run: |
