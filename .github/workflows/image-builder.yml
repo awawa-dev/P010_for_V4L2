@@ -142,7 +142,7 @@ jobs:
         echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
     - name: Upload image
-      uses: actions/upload-artifact@v7.0.1
+      uses: actions/upload-artifact@v7.0.2
       if: (startsWith(github.event.ref, 'refs/tags') != true)
       with:
         name: ${{ steps.copy.outputs.image }}
